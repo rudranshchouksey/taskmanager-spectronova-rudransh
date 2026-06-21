@@ -2,7 +2,7 @@ import { MessageSquare, Link2, FileText, Flag, MoreHorizontal, Pencil, Trash2 } 
 import { useState } from 'react';
 import type { Task, TaskStatus, TaskPriority } from '../../BLL/taskManager/types';
 import type { TaskManager } from '../../BLL/taskManager/TaskManager';
-import { getAvatarColor, getInitials, formatDate } from './utils';
+import { getAvatarColor, getInitials, formatDate } from '../../utils/utils';
 
 interface TaskCardProps {
   task: Task;

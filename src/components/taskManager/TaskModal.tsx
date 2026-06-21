@@ -2,7 +2,7 @@ import { X, Plus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import type { Task, TaskStatus, TaskPriority, TaskType, TaskFormData } from '../../BLL/taskManager/types';
 import type { TaskManager } from '../../BLL/taskManager/TaskManager';
-import { getAvatarColor, getInitials } from './utils';
+import { getAvatarColor, getInitials } from '../../utils/utils';
 
 interface TaskModalProps {
   manager: TaskManager;

@@ -11,7 +11,7 @@ import {
   Grid3x3,
   Bell,
 } from 'lucide-react';
-import { getAvatarColor, getInitials } from './utils';
+import { getAvatarColor, getInitials } from '../../utils/utils';
 
 const currentUser = { name: 'Davis Donin', email: 'daviddoni@gmail.com' };
 

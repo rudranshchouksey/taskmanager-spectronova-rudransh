@@ -26,7 +26,7 @@ import { useState } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import type { Task, TaskStatus, TaskType, FilterOptions, SortOptions } from '../../BLL/taskManager/types';
 import type { TaskManager } from '../../BLL/taskManager/TaskManager';
-import { getAvatarColor, getInitials } from './utils';
+import { getAvatarColor, getInitials } from '../../utils/utils';
 
 interface ListViewProps {
   manager: TaskManager;

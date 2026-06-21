@@ -1,4 +1,4 @@
-import type { TaskPriority, TaskStatus } from '../../BLL/taskManager/types';
+import type { TaskPriority, TaskStatus } from '../BLL/taskManager/types';
 
 const AVATAR_COLORS = [
   'bg-violet-500',

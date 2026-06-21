@@ -21,7 +21,7 @@ import {
   formatDateTime,
   PRIORITY_CONFIG,
   STATUS_CONFIG,
-} from './utils';
+} from '../../utils/utils';
 
 interface TaskDetailPanelProps {
   task: Task;

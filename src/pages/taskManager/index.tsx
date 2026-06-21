@@ -18,14 +18,14 @@ import type {
   SortOptions,
   SortField,
 } from '../../BLL/taskManager/types';
-import { Sidebar } from '../../components/taskManager/Sidebar';
+import { Sidebar } from '../../components/Sidebar/Sidebar';
 import { KanbanBoard } from '../../components/taskManager/KanbanBoard';
 import { ListView } from '../../components/taskManager/ListView';
 import { TaskModal } from '../../components/taskManager/TaskModal';
-import { TaskDetailPanel } from '../../components/taskManager/TaskDetailPanel';
-import { DeleteConfirmModal } from '../../components/taskManager/DeleteConfirmModal';
+import { TaskDetailPanel } from '../../components/TaskDetail/TaskDetailPanel';
+import { DeleteConfirmModal } from '../../components/TaskDetail/DeleteConfirmModal';
 import { ViewToggle } from '../../components/taskManager/ViewToggle';
-import { getAvatarColor, getInitials } from '../../components/taskManager/utils';
+import { getAvatarColor, getInitials } from '../../utils/utils';
 
 const VIEW_STORAGE_KEY = 'taskmanager_view';
 
