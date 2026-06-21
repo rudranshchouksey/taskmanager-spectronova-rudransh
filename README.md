@@ -69,19 +69,3 @@ Given the assessment's time box, the following are explicit, intentional cuts ra
 - **No authentication or multi-user concurrency.** The sidebar profile ("Sarah Johnson") is static decoration; there is no login, no per-user task ownership, and no concurrent-edit conflict handling.
 - **No automated test suite.** Verification for every feature in this build was done via live, scripted browser interaction (Playwright driving the actual dev server) rather than a checked-in unit/integration suite, which was traded off against the time available.
 
-## 5. Time Log Allocation (48-Hour Window)
-
-| Phase | Hours | Detail |
-|---|---|---|
-| Environment configuration | 4 | Vite + React + TypeScript scaffold review, wiring Tailwind CSS v4 (`@tailwindcss/vite` plugin, `@import` setup) since the template shipped without it actually connected, removing legacy template CSS constraints. |
-| Entity relationship mapping | 3 | Defining `Task`/`TaskStatus`/`TaskPriority`/`TaskManagerListener` contracts in `types.ts`, deciding the `TaskManager` method surface (`moveTo`, `createTask`, `updateTask`, `deleteTask`, `setFilters`) before any UI existed. |
-| Data seeding | 3 | Authoring `mockData.ts` with deliberate coverage: status/priority distribution, overdue cases, multi-developer assignees, and tag coverage matching the reference imagery. |
-| Core BLL implementation | 4 | `TaskManager` class: filtering, pub-sub `notify()`/`subscribe()`, and later the activity-log audit trail extension. |
-| React/BLL binding layer | 3 | `useTaskManager` hook, page shell, sidebar nav, view-mode persistence via `localStorage`. |
-| Drafting drag-and-drop modules | 6 | `KanbanBoard`/`KanbanColumn`/`TaskCard` native HTML5 DnD (`dragstart`/`dragover`/`drop`), plus debugging the gap between mouse-simulated automation and real native drag event semantics during verification. |
-| List view & sorting | 5 | `ListView` grouped table layout, class-driven `TaskListSorter` for due-date/priority sort toggling, inline checkbox-to-status interaction. |
-| Task detail drawer | 7 | Sliding drawer mechanics, property editing form, validation rules, delete confirmation, and the activity-timeline ledger (including extending the BLL to actually record history rather than fake it). |
-| Layout design refinement | 6 | Typography scale enforcement (24px/700 page title, 13–14px card text, 11px badges), base-4px spacing audit, priority/status color language consistency across all three views. |
-| Cross-view & lint/type hardening | 4 | Resolving `eslint-plugin-react-hooks` v7 strict-mode findings (`set-state-in-effect`, ref-during-render) without regressing behavior; full `tsc`/`eslint` pass. |
-| Cross-browser/interaction QA | 3 | Scripted Playwright verification of drag-and-drop, sort toggles, modal validation, save/delete flows, and console-error checks across each feature pass. |
-| **Total** | **48** | |
