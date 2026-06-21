@@ -1,71 +1,60 @@
 # Task Manager
 
-A production-fidelity Task Manager built with React, Vite, TypeScript, and Tailwind CSS, modeled on the supplied Dribbble references. It ships a drag-and-drop Kanban board, a sortable multi-tier list view, and a sliding task-detail drawer with live activity history — all driven by a single pure-TypeScript business logic layer.
+A single-page task management app (Kanban board + list view) built with React, TypeScript, and Tailwind CSS, backed by an in-memory business logic layer.
 
-## 1. Setup and Initialization
+## 1. Setup & Run
 
-Requires Node 18+.
+Requirements: Node.js 18+ and npm.
 
 ```bash
 npm install && npm run dev
 ```
 
-Vite will print a local URL (default `http://localhost:5173`). Open it in a browser — no environment variables, database, or backend service are required; all data is seeded in-memory on load.
-
-Other available scripts:
+This starts the Vite dev server (default `http://localhost:5173`). Other available scripts:
 
 ```bash
-npm run build    # tsc -b && vite build — production bundle
-npm run preview  # serve the production build locally
-npm run lint     # eslint .
+npm run build      # production build
+npm run preview    # preview the production build locally
+npm run lint        # ESLint
+npm run typecheck   # tsc --noEmit
 ```
 
-## 2. Core Architecture Overview
+There is no backend and no environment configuration required — all task data is seeded in-memory from [src/BLL/taskManager/mockData.ts](src/BLL/taskManager/mockData.ts) and lives for the duration of the browser session only.
 
-### Business logic lives in one class, not in components
+## 2. Core Architecture
 
-All task state and every mutation (`moveTo`, `createTask`, `updateTask`, `deleteTask`, `setFilters`) live inside [`TaskManager`](src/BLL/taskManager/TaskManager.ts), a plain TypeScript class with **zero React imports**. This was a deliberate structural boundary, not a stylistic preference:
+### `TaskManager`: a plain TypeScript class, not a global store
 
-- **Testability and clarity of ownership.** A class with explicit methods is trivial to reason about and unit-test in isolation from rendering concerns. Every decision about *what counts as a valid mutation* (e.g., what text an activity-log entry gets when status changes) is made in exactly one place, so the UI layer never has to re-derive or guess at business rules.
-- **No accidental logic leakage into JSX.** Components only ever call `manager.<verb>(...)` and render whatever the manager hands back. If two views (the Kanban board and the list view) both need to toggle a task to "done," they call the same `updateTask`, so behavior — including audit-trail entries — never drifts between views.
-- **Audit trail as a first-class concern.** The activity ledger shown in the task detail drawer (`getActivity(taskId)`) is populated by the manager itself at the moment a mutation happens, not synthesized after the fact in a component. This guarantees the timeline is always an accurate record of what actually happened, in the order it happened.
+All task mutations (create, update, delete, move, filter, sort) live in [src/BLL/taskManager/TaskManager.ts](src/BLL/taskManager/TaskManager.ts) as methods on a plain `TaskManager` class — no React, no hooks, no JSX inside it. It owns a private `tasks` array and exposes a narrow method surface (`createTask`, `updateTask`, `deleteTask`, `moveTo`, `filterTasks`, `sortTasks`, `getFilteredAndSorted`, ...).
 
-### No global store wrapper — direct instance prop-threading
+This separation is deliberate: business rules (e.g. priority ordering, overdue calculation, filter predicates) are unit-testable in isolation, independent of any render cycle, and have no risk of being re-triggered or duplicated by React's render behavior (e.g. StrictMode double-invocation, concurrent rendering). UI components never reach into the task array directly — they only ever call methods on the manager instance.
 
-There is no Redux/Zustand/Context provider anywhere in this codebase. A single `TaskManager` instance is created once per page load via `useMemo(() => new TaskManager(), [])` in [`pages/taskManager/index.tsx`](src/pages/taskManager/index.tsx) and passed down explicitly as a `manager` prop through every layer that needs it (`KanbanBoard` → `KanbanColumn` → `TaskCard`, and `ListView`, and `TaskModal`).
+### No Context provider — direct instance prop-threading
 
-This was a deliberate choice given the shape of the problem:
+Rather than wrapping the tree in a Context provider, [src/pages/taskManager/index.tsx](src/pages/taskManager/index.tsx) constructs a single `TaskManager` instance once (`useState(() => new TaskManager())`) and passes that *same instance* down as a `manager` prop to `KanbanBoard`, `ListView`, `TaskModal`, and `TaskDetailPanel`. Each of those forwards it further down to their own children (e.g. `KanbanColumn`).
 
-- The component tree is shallow (3–4 levels), so prop-threading doesn't suffer the "prop drilling fatigue" that justifies Context in deeper trees.
-- A Context provider would have added an indirection layer (provider component, context object, consumer hook) to solve a problem that doesn't exist here: every consumer of `manager` already legitimately needs it passed down for that exact subtree.
-- Explicit props keep the data flow traceable by reading signatures alone — opening any component file shows exactly what it depends on, with no implicit "ambient" state to track down.
+For an app of this size, a Context provider would add indirection (provider component, context object, a consumer hook) to solve a problem that doesn't exist here: there is exactly one manager instance for the lifetime of the page, and every consumer needs the same one. Prop-threading keeps the dependency explicit and traceable at every call site, and avoids the unnecessary re-render fan-out that naive Context consumption can cause.
 
-### Reactivity via a listener subscription hook, not polling or context
+### Re-render signal: an explicit `tick` counter threaded as a callback
 
-`TaskManager` exposes `subscribe(listener): () => void`, called from every mutating method's internal `notify()`. The [`useTaskManager`](src/hooks/useTaskManager.ts) hook is the single bridge between this manager and React:
+Because `TaskManager` is a plain class, mutating it does **not** automatically trigger a React re-render. The page holds a `tick` counter and a `forceUpdate = () => setTick(t => t + 1)` callback ([src/pages/taskManager/index.tsx:46-70](src/pages/taskManager/index.tsx#L46-L70)). Every mutating action threads back up through an `on*` callback prop (`onSaved`, `onTaskMoved`, `onUpdateTaskStatus`, `handleConfirmDelete`, etc.), calls the relevant `manager` method, and then calls `forceUpdate()`.
 
-```ts
-const [tasks, setTasks] = useState(() => taskManager.getFilteredTasks());
-useEffect(() => taskManager.subscribe(setTasks), [taskManager]);
-```
-
-Because the manager pushes new snapshots only when something actually changes (a card is dragged, a checkbox is toggled, a modal is saved), components re-render exactly once per real mutation — there is no polling, no diffing of unrelated state, and no provider-wide re-render fan-out that a Context-based store would otherwise trigger across every consumer regardless of relevance.
+This keeps the re-render trigger centralized and predictable: one state value at the top of the tree, one place that bumps it, and every child re-derives its data on that render by calling read methods (`getFilteredAndSorted`, `getFilteredByStatus`, `getAllAssignees`) straight off the manager. There is intentionally no listener/event-emitter machinery inside `TaskManager` itself — the manager stays a dumb, framework-agnostic data object, and React's own state update is the only signal that drives a re-render.
 
 ## 3. UI Design Trade-offs & Decisions
 
-1. **Sliding side drawer instead of a center modal.** The task detail view (`TaskModal.tsx`) glides in from the right edge over a translucent backdrop rather than using a screen-centered dialog. A center modal interrupts the board/list layout the user was just scanning and forces a jarring re-focus; an edge drawer keeps the board visible and contextually "behind" the task being inspected, matching the reference design and reading as a natural extension of the row/card the user clicked rather than an unrelated overlay.
+**Slide-in drawer for inspection, centered modal for forms.** `TaskDetailPanel` renders as a right-aligned slide-in drawer (`fixed inset-0 ... justify-end`, [TaskDetailPanel.tsx:164](src/components/TaskDetail/TaskDetailPanel.tsx#L164)), while `TaskModal` (create/edit) and `DeleteConfirmModal` render as centered dialogs (`justify-center`, [TaskModal.tsx:102](src/components/taskManager/TaskModal.tsx#L102)). The split is intentional: inspecting a task is a glanceable, low-commitment action that benefits from staying anchored to the list/board behind it (you can still see your place in the data), whereas creating/editing/deleting is a focused, blocking action where centering removes ambiguity about what the user is currently committed to.
 
-2. **Deterministic character-hash color indexing for avatars.** Assignee initials (`getAvatarColor` in [`utils/avatar.ts`](src/utils/avatar.ts)) are colored by summing character codes of the name and indexing into a fixed Tailwind palette, rather than assigning colors randomly or by insertion order. This guarantees the *same person* always renders in the *same color* everywhere they appear (Kanban card, list row, modal) without needing a lookup table, a database column, or any persisted state — the name itself is the only input required, so the property holds even across page reloads or for newly created tasks.
+**Deterministic hash-based avatar colors instead of stored/random colors.** `getAvatarColor` ([src/utils/utils.ts:14-20](src/utils/utils.ts#L14-L20)) derives a color by hashing the assignee's name (`charCodeAt` accumulation) and indexing into a fixed 8-color palette. No color is persisted on the `Task`/assignee model. This guarantees the same person always renders the same badge color everywhere in the app (header avatars, cards, drawer, filters) without needing a `User` table or a color field threaded through every component — at the cost of occasional palette collisions once more than 8 distinct names are in play.
 
-3. **Strict base-4px spacing scale.** Every padding/margin/gap value across `TaskCard`, `KanbanColumn`, and `ListView` uses Tailwind's default spacing scale (4px increments: `p-1`=4px, `p-2`=8px, `p-3`=12px, etc.) rather than arbitrary pixel values. This was enforced deliberately so that cards, chips, and avatars align on a shared rhythm regardless of which view they're rendered in, avoiding the subtly-misaligned look that comes from mixing ad hoc spacing values across components built at different times.
+**Spacing snapped to Tailwind's 4px scale, with explicit 2px half-steps for optical alignment.** Layout spacing (`p-2`, `gap-3`, `px-8`, `py-4`, etc.) is built on Tailwind's default spacing scale, which is 4px-based — there is no custom spacing override in [tailwind.config.js](tailwind.config.js). A handful of spots intentionally break to the half-step (`gap-1.5` = 6px, `py-2.5` = 10px, `mt-0.5` = 2px) where an icon needs to optically center against adjacent text — a deliberate exception to the grid rather than an inconsistency.
 
-## 4. Boundary Scope Limitations
+## 4. Scope Boundaries & Known Limitations
 
-Given the assessment's time box, the following are explicit, intentional cuts rather than oversights:
+This was built under a 48-hour assessment window, so the following were consciously left out of scope rather than missed:
 
-- **Date handling is calendar-day only, not timezone-aware.** `dueDate`/`createdAt` are stored as plain `YYYY-MM-DD` strings and parsed via local calendar components (`parseDateOnly` in [`utils/date.ts`](src/utils/date.ts)) specifically to avoid UTC-parsing off-by-one bugs in negative-UTC-offset zones. This means "today" is evaluated against the *browser's local clock* with no server-authoritative time source and no per-user timezone preference — acceptable for a single-user demo, but not multi-timezone-team-safe.
-- **No mobile/responsive breakpoints.** The layout (fixed 256px sidebar + flexible main content, fixed-width Kanban columns, a six-column list grid) is built and verified at desktop widths (1440px) only, matching the Dribbble references, which are themselves desktop-only compositions. Narrow viewports will show horizontal overflow on the board and a cramped list grid rather than a stacked mobile layout.
-- **No persistence layer.** All state lives in the `TaskManager` instance's in-memory array, seeded from `mockData.ts` on every page load. Refreshing the page resets all edits, drags, and deletions. There is no backend, local-storage sync of task data, or multi-tab consistency (the view-mode toggle is the one exception, which intentionally does persist via `localStorage`).
-- **No authentication or multi-user concurrency.** The sidebar profile ("Sarah Johnson") is static decoration; there is no login, no per-user task ownership, and no concurrent-edit conflict handling.
-- **No automated test suite.** Verification for every feature in this build was done via live, scripted browser interaction (Playwright driving the actual dev server) rather than a checked-in unit/integration suite, which was traded off against the time available.
-
+- **Time zones.** Dates are formatted with `toLocaleDateString` / `toLocaleTimeString` against the browser's local time zone ([src/utils/utils.ts:31-43](src/utils/utils.ts#L31-L43)). There is no stored UTC offset, no per-user time zone preference, and no normalization — due dates are treated as wall-clock dates, which is correct for a single-user/single-locale demo but would need an explicit UTC+offset model for multi-timezone teams.
+- **Mobile responsiveness.** Only `ListView` and `KanbanBoard` carry responsive (`md:`) breakpoints; the persistent `Sidebar`, the top header/filter bar, the create/edit modal, and the detail drawer are laid out for desktop viewport widths and have not been verified below typical tablet width.
+- **Persistence.** All data is seeded from `mockData.ts` into an in-memory array; there is no backend, so a page refresh resets all tasks. `@supabase/supabase-js` is present in `package.json` as a leftover starter-template dependency and is not wired up anywhere in `src/`.
+- **Real-time/multi-user collaboration.** The activity feed in `TaskDetailPanel` is static mock data, not derived from actual task mutations — there is no event log behind the comments/activity/reactions UI.
+- **No automated test suite.** Verification was done through manual interaction with the running dev server rather than a checked-in unit/integration suite, traded off against the time available.
