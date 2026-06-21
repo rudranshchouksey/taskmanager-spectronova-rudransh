@@ -16,11 +16,10 @@ interface KanbanColumnProps {
   onTaskMoved: () => void;
 }
 
-/* Dot color matches the image: amber=todo, blue=in-progress, pink=done */
 const COLUMN_DOT: Record<TaskStatus, string> = {
-  todo: 'bg-amber-400',
-  'in-progress': 'bg-blue-500',
-  done: 'bg-pink-500',
+  todo: 'bg-[#F59E0B]',
+  'in-progress': 'bg-[#2563EB]',
+  done: 'bg-[#EC4899]',
 };
 
 export function KanbanColumn({
@@ -61,46 +60,45 @@ export function KanbanColumn({
   const dot = COLUMN_DOT[status];
 
   return (
-    <div className="column flex flex-col min-h-[calc(100vh-200px)] bg-[#f5f6f8] rounded-2xl p-3">
+    <div className="flex flex-col min-h-[calc(100vh-160px)] bg-[#F8FAFC] rounded-3xl p-4 border border-[#F1F5F9]">
       {/* Column header */}
-      <div className="column-header flex items-center gap-2 mb-3 px-1 flex-shrink-0">
+      <div className="flex items-center gap-2.5 mb-4 px-1 flex-shrink-0">
         <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${dot}`} />
-        <span className="text-[15px] font-semibold text-slate-800 flex-1 leading-none">
+        <span className="text-[16px] font-bold text-slate-800 flex-1">
           {label}
         </span>
-        <span className="text-[12px] font-semibold text-slate-500 bg-white rounded-full px-2 py-0.5 min-w-[22px] text-center leading-snug">
+        <span className="text-[12px] font-bold text-[#2563EB] bg-[#EFF6FF] rounded-full w-6 h-6 flex items-center justify-center">
           {tasks.length}
         </span>
         <button
           onClick={() => onAddTask(status)}
           className="p-1 rounded-lg text-slate-400 hover:bg-white hover:text-slate-600 transition-colors"
         >
-          <Plus size={15} />
+          <Plus size={18} className="stroke-[2]" />
         </button>
         <button className="p-1 rounded-lg text-slate-400 hover:bg-white hover:text-slate-600 transition-colors">
-          <MoreHorizontal size={15} />
+          <MoreHorizontal size={18} className="stroke-[2]" />
         </button>
       </div>
 
-      {/* Scrollable cards area — also the drop zone, so dropping anywhere
-          in the column's empty space (not just on a card) still works */}
+      {/* Cards drop container area */}
       <div
-        className={`column-content flex-1 overflow-y-auto space-y-3 rounded-xl transition-colors duration-150 ${
-          isDragOver ? 'bg-blue-100/70 ring-2 ring-inset ring-blue-300 ring-dashed' : ''
+        className={`flex-1 overflow-y-auto space-y-4 rounded-2xl transition-all duration-150 p-0.5 ${
+          isDragOver ? 'bg-slate-100/80 ring-2 ring-inset ring-slate-200 ring-dashed' : ''
         }`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
         {tasks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-10 text-center">
-            <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center mb-2.5">
-              <ClipboardList size={18} className="text-slate-300" />
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center mb-3 shadow-sm border border-slate-100">
+              <ClipboardList size={20} className="text-slate-300" />
             </div>
-            <p className="text-[12px] font-medium text-slate-400">No tasks</p>
+            <p className="text-[13px] font-semibold text-slate-400">No tasks here</p>
             <button
               onClick={() => onAddTask(status)}
-              className="mt-2 text-[11px] font-semibold text-blue-500 hover:text-blue-600 transition-colors"
+              className="mt-2 text-[12px] font-bold text-blue-500 hover:text-blue-600 transition-colors"
             >
               + Add task
             </button>

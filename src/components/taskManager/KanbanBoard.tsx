@@ -30,21 +30,23 @@ export function KanbanBoard({
   onTaskMoved,
 }: KanbanBoardProps) {
   return (
-    <div className="board grid grid-cols-3 gap-6 items-start">
-      {COLUMNS.map(({ status, label }) => (
-        <KanbanColumn
-          key={status}
-          status={status}
-          label={label}
-          tasks={manager.getFilteredByStatus(status, filters, sort)}
-          manager={manager}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onSelect={onSelect}
-          onAddTask={onAddTask}
-          onTaskMoved={onTaskMoved}
-        />
-      ))}
+    <div className="bg-white w-full p-6 rounded-3xl">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+        {COLUMNS.map(({ status, label }) => (
+          <KanbanColumn
+            key={status}
+            status={status}
+            label={label}
+            tasks={manager.getFilteredByStatus(status, filters, sort)}
+            manager={manager}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onSelect={onSelect}
+            onAddTask={onAddTask}
+            onTaskMoved={onTaskMoved}
+          />
+        ))}
+      </div>
     </div>
   );
 }
